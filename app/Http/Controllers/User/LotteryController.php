@@ -156,10 +156,11 @@ class LotteryController extends Controller
     private function pickingValidation($lottery, $request)
     {
         $minimumTicket = min($lottery->line_variations);
-        if ($lottery->ball_start_from) {
-            $maximumNormalBallNumber = $lottery->no_of_ball;
+        $ballStartFrom = (int) $lottery->ball_start_from;
+        if ($ballStartFrom) {
+            $maximumNormalBallNumber = (int) $lottery->ball_end;
         } else {
-            $maximumNormalBallNumber = $lottery->no_of_ball - 1;
+            $maximumNormalBallNumber = $lottery->ball_end - 1;
         }
 
         if ($lottery->pw_ball_start_from) {
@@ -178,10 +179,10 @@ class LotteryController extends Controller
             'payment_via'            => 'required|in:balance,direct',
             'entry_type'             => 'nullable|in:1,2',
             'ticket'                 => 'required|array|min:' . $minimumTicket,
-            'ticket.*.normal_ball'   => 'required|array|size:' . $lottery->total_picking_ball,
-            'ticket.*.power_ball'    => $powerBallValidation . '|array|size:' . $lottery->total_picking_power_ball,
-            'ticket.*.normal_ball.*' =>  'required|numeric|between:' . $lottery->ball_start_from . ',' . $maximumNormalBallNumber,
-            'ticket.*.power_ball.*'  => 'required|numeric|between:' . $lottery->pw_ball_start_from . ',' . $maximumPowerBallNumber
+            'ticket.*.normal_ball'   => 'required|array',
+            'ticket.*.normal_ball.*' => 'required|numeric|between:' . $lottery->ball_start_from . ',' . $maximumNormalBallNumber,
+            'ticket.*.power_ball'    => $lottery->has_power_ball ? $powerBallValidation . '|array|size:' . $lottery->total_picking_power_ball : '',
+            'ticket.*.power_ball.*'  => $lottery->has_power_ball ? $powerBallValidation. '|numeric|between:' . $lottery->pw_ball_start_from . ',' . $maximumPowerBallNumber : ''
         ];
 
         $message = [
@@ -190,9 +191,9 @@ class LotteryController extends Controller
             'ticket.min'                      => 'The ticket must be at least ' . $minimumTicket,
             'ticket.*.normal_ball.required'   => 'Each ticket should have ' . $lottery->total_picking_ball . ' normal balls selected',
             'ticket.*.normal_ball.size'       => 'The normal ball must be ' . $lottery->total_picking_ball,
+            'ticket.*.normal_ball.*.between'  => 'The normal ball must be between ' . $lottery->ball_start_from . ' and ' . $maximumNormalBallNumber,
             'ticket.*.power_ball.required'    => 'Each ticket should have ' . $lottery->total_picking_power_ball . ' power balls selected',
             'ticket.*.power_ball.size'        => 'The power ball must be ' . $lottery->total_picking_power_ball,
-            'ticket.*.normal_ball.*.between'  => 'The normal ball must be between ' . $lottery->ball_start_from . ' and ' . $maximumNormalBallNumber,
             'ticket.*.power_ball.*.between'   => 'The power ball must be between ' . $lottery->pw_ball_start_from . ' and ' . $maximumPowerBallNumber
         ];
 

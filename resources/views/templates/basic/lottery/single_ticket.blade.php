@@ -7,13 +7,16 @@
                     for ($i = 0; $i < $lottery->no_of_ball; $i++) {
                         $no_of_tickets .= "9";
                     }
+                    $disable_range = intval($lottery->ball_disable_range);
                 @endphp
                 @for ($i = 1; $i <= intval($no_of_tickets); $i++)
+                    @if($i > $disable_range && !in_array($i, $pickedNumbers))
                     <li class="normalBallNo-{{ $i }}">
                         <button class="lottery__btn normalBtn" data-no="{{ $i }}">
                             {{ str_pad($i, $lottery->no_of_ball, '0', STR_PAD_LEFT) }}
                         </button>
                     </li>
+                    @endif
                 @endfor
             </ul>
         </div>
