@@ -73,14 +73,19 @@ class LotteryController extends Controller
         $lottery->price                    = $request->price;
         $lottery->line_variations          = $numbers;
         $lottery->no_of_ball               = $request->no_of_ball;
-        // $lottery->ball_start_from          = $request->ball_start_from;
         $lottery->ball_start_from          = $request->ball_start_from;
+        $lottery->ball_start               = $request->ball_start;
+        $lottery->ball_end                 = $request->ball_end;
+        $lottery->ball_disable_range       = $request->ball_disable_range;
         $lottery->total_picking_ball       = $request->total_picking_ball;
         $lottery->has_multi_draw           = $request->has_multi_draw ? Status::YES : Status::NO;
         $lottery->auto_creation_phase      = $request->auto_creation_phase ? Status::YES : Status::NO;
         $lottery->has_power_ball           = $request->has_power_ball ? Status::YES : Status::NO;
         $lottery->no_of_pw_ball            = $request->no_of_pw_ball ?? 0;
         $lottery->pw_ball_start_from       = $request->pw_ball_start_from ?? 0;
+        $lottery->has_special_balls        = $request->has_special_balls ? Status::YES : Status::NO;
+        $lottery->special_winning_ball     = $request->special_winning_ball;
+        $lottery->special_winning_prize    = $request->special_winning_prize;
         $lottery->total_picking_power_ball = $request->total_picking_power_ball ?? 0;
 
         if ($request->hasFile('image')) {
@@ -156,7 +161,10 @@ class LotteryController extends Controller
             'price'                     => 'required|numeric|min:0',
             'line_variations'           => 'required',
             'no_of_ball'                => 'required|integer|min:1',
-            // 'ball_start_from'           => 'required|integer|in:0,1',
+            'ball_start_from'           => 'nullable|numeric',
+            'ball_start'                => 'nullable|numeric',
+            'ball_end'                  => 'nullable|numeric',
+            'ball_disable_range'        => 'nullable|numeric|lt:ball_end|gt:ball_start_from',
             'total_picking_ball'        => 'required|integer|min:1',
             'has_multi_draw'            => 'required|integer|in:0,1',
             'image'                     => [$imgValidation, new FileTypeValidate(['jpg', 'jpeg', 'png'])],
@@ -164,6 +172,9 @@ class LotteryController extends Controller
             'no_of_pw_ball'             => 'nullable|required_if:has_power_ball,==,1|integer|min:0',
             'pw_ball_start_from'        => 'nullable|required_if:has_power_ball,==,1|integer|in:0,1',
             'total_picking_power_ball'  => 'nullable|required_if:has_power_ball,==,1|integer|min:1|lt:no_of_pw_ball',
+            'has_special_balls'         => 'nullable|in:1',
+            'special_winning_ball'      => 'nullable|required_if:has_special_balls,==,1|numeric|lt:ball_end|gt:ball_start_from',
+            'special_winning_prize'     => 'nullable|required_if:has_special_balls,==,1|numeric|min:0',
             'auto_creation_phase'       => 'nullable|in:1',
             'phase_type'                => 'nullable|required_if:auto_creation_phase,==,1|numeric|in:1,2',
             'days'                      => 'nullable|required_if:auto_creation_phase,==,1|array',
