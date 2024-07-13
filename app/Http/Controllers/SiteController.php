@@ -75,10 +75,21 @@ class SiteController extends Controller
             $pwBallLimit = $lottery->no_of_pw_ball;
         }
 
+        $pickedNumbers = [];
+        if(!$lottery->activePhase->pickedTickets->isEmpty()) {
+            foreach($lottery->activePhase->pickedTickets as $pickedTickets) {
+                if(!empty($pickedTickets->normal_balls)) {
+                    foreach ($pickedTickets->normal_balls as $ball) {
+                        $pickedNumbers[] = $ball;
+                    }
+                }
+            }
+        }
+
         $html = '';
         for ($i = 1; $i <= $request->difference; $i++) {
             $lotteryNumber = $request->last_ticket + $i;
-            $html .= view($this->activeTemplate . 'lottery.single_ticket', compact('lottery', 'lotteryNumber', 'normalBallLimit', 'pwBallLimit'))->render();
+            $html .= view($this->activeTemplate . 'lottery.single_ticket', compact('lottery', 'lotteryNumber', 'normalBallLimit', 'pwBallLimit', 'pickedNumbers'))->render();
         }
 
         return response()->json([

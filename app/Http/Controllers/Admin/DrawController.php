@@ -192,10 +192,11 @@ class DrawController extends Controller
     private function validateWinningBalls($request, $lottery)
     {
         $allInRange = true;
-        if ($lottery->ball_start_from) {
-            $maximumNormalBallNumber = $lottery->no_of_ball;
+        $ballStartFrom = (int) $lottery->ball_start_from;
+        if ($ballStartFrom) {
+            $maximumNormalBallNumber = (int) $lottery->ball_end;
         } else {
-            $maximumNormalBallNumber = $lottery->no_of_ball - 1;
+            $maximumNormalBallNumber = $lottery->ball_end - 1;
         }
 
         if ($lottery->pw_ball_start_from) {
