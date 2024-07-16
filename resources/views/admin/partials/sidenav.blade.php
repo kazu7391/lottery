@@ -44,6 +44,12 @@
                         </ul>
                     </div>
                 </li>
+                <li class="sidebar-menu-item {{ menuActive('admin.tickets*', 2) }}">
+                    <a class="nav-link " href="{{ route('admin.tickets.index') }}">
+                        <i class="menu-icon las la-ticket-alt"></i>
+                        <span class="menu-title">@lang('Manage Tickets')</span>
+                    </a>
+                </li>
                 <li class="sidebar-menu-item {{ menuActive('admin.coin.request.log') }}">
                     <a class="nav-link " href="{{ route('admin.coin.request.log') }}">
                         <i class="menu-icon las la-coins"></i>
@@ -56,7 +62,7 @@
                         <span class="menu-title">@lang('Manage Referral')</span>
                     </a>
                 </li>
-               
+
                 <li class="sidebar-menu-item sidebar-dropdown">
                     <a class="{{ menuActive('admin.users*', 3) }}" href="javascript:void(0)">
                         <i class="menu-icon las la-users"></i>

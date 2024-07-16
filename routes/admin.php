@@ -70,6 +70,11 @@ Route::middleware('admin')->group(function () {
         Route::post('phase/status/{id}', 'updatePhaseStatus')->name('phase.status');
     });
 
+    //manage lottery
+    Route::controller('TicketController')->name('tickets.')->prefix('tickets')->group(function () {
+        Route::get('/', 'index')->name('index');
+    });
+
     //manage draw lottery
     Route::controller('DrawController')->name('draw.')->prefix('draw')->group(function () {
         Route::get('pending', 'pendingDraw')->name('pending');
@@ -176,7 +181,7 @@ Route::middleware('admin')->group(function () {
             Route::post('status/{id}', 'status')->name('status');
         });
     });
-    
+
     // Report
     Route::controller('ReportController')->prefix('report')->name('report.')->group(function () {
         Route::get('transaction', 'transaction')->name('transaction');
