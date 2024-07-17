@@ -1,6 +1,6 @@
 @extends('admin.layouts.app')
 @section('panel')
-    <form action="{{ route('admin.lottery.store', @$lottery->id) }}" enctype="multipart/form-data" method="POST">
+    <form action="{{ route('admin.tickets.store', @$lottery->id) }}" enctype="multipart/form-data" method="POST">
         @csrf
         <input type="hidden" name="is_ticket" value="1" />
         <div class="row">

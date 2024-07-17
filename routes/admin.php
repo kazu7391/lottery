@@ -68,15 +68,14 @@ Route::middleware('admin')->group(function () {
         Route::get('phase/all', 'phases')->name('phase.all');
         Route::post('phase/save/{id?}', 'savePhase')->name('phase.save');
         Route::post('phase/status/{id}', 'updatePhaseStatus')->name('phase.status');
-
-        Route::get('ticket/', 'ticketIndex')->name('ticket.index');
-        Route::get('ticket/create/{id?}', 'ticketCreate')->name('ticket.create');
-        Route::get('ticket/phase/all', 'ticketPhases')->name('ticket.phase.all');
     });
 
     //manage lottery
-    Route::controller('TicketController')->name('tickets.')->prefix('tickets')->group(function () {
-        Route::get('/', 'index')->name('index');
+    Route::controller('LotteryController')->name('tickets.')->prefix('tickets')->group(function () {
+        Route::get('/', 'ticketIndex')->name('index');
+        Route::get('create/{id?}', 'ticketCreate')->name('create');
+        Route::post('store/{id?}', 'ticketStore')->name('store');
+        Route::get('phase/all', 'ticketPhases')->name('phase.all');
     });
 
     //manage draw lottery

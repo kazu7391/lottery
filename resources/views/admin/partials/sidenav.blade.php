@@ -45,20 +45,20 @@
                     </div>
                 </li>
                 <li class="sidebar-menu-item sidebar-dropdown">
-                    <a class="{{ menuActive('admin.lottery.ticket*', 3) }}" href="javascript:void(0)">
+                    <a class="{{ menuActive('admin.tickets*', 3) }}" href="javascript:void(0)">
                         <i class="menu-icon las la-ticket-alt"></i>
                         <span class="menu-title">@lang('Manage Ticket')</span>
                     </a>
-                    <div class="sidebar-submenu {{ menuActive('admin.lottery.ticket*', 2) }} ">
+                    <div class="sidebar-submenu {{ menuActive('admin.tickets*', 2) }} ">
                         <ul>
-                            <li class="sidebar-menu-item {{ menuActive(['admin.lottery.ticket.index', 'admin.lottery.ticket.create']) }} ">
-                                <a class="nav-link" href="{{ route('admin.lottery.ticket.index') }}">
+                            <li class="sidebar-menu-item {{ menuActive(['admin.tickets.index', 'admin.tickets.create']) }} ">
+                                <a class="nav-link" href="{{ route('admin.tickets.index') }}">
                                     <i class="menu-icon las la-dot-circle"></i>
                                     <span class="menu-title">@lang('Tickets')</span>
                                 </a>
                             </li>
-                            <li class="sidebar-menu-item {{ menuActive('admin.lottery.ticket.phase.all') }} ">
-                                <a class="nav-link" href="{{ route('admin.lottery.ticket.phase.all') }}">
+                            <li class="sidebar-menu-item {{ menuActive('admin.tickets.phase.all') }} ">
+                                <a class="nav-link" href="{{ route('admin.tickets.phase.all') }}">
                                     <i class="menu-icon las la-dot-circle"></i>
                                     <span class="menu-title">@lang('Phases')</span>
                                 </a>

@@ -47,6 +47,124 @@ class LotteryController extends Controller
         return view('admin.lottery.ticket.phases', compact('pageTitle', 'phases', 'lotteries'));
     }
 
+    public function ticketStore(Request $request, $id = 0)
+    {
+        $this->ticketValidation($request, $id);
+
+        if ($request->auto_creation_phase && hasDuplicateValues($request->days)) {
+            $message = 'Draw day should be different';
+            if ($request->phase_type == 2) {
+                $message = 'Draw date should be different';
+            }
+
+            $notify[] = ['error', $message];
+            return back()->withNotify($notify);
+        }
+
+        if ($id) {
+            $lottery      = Lottery::findOrFail($id);
+            $notification = 'Ticket updated successfully';
+        } else {
+            $lottery      = new Lottery();
+            $notification = 'Ticket created successfully';
+        }
+
+        $lottery->name                     = $request->name;
+        $lottery->price                    = $request->price;
+        $lottery->no_of_ball               = $request->no_of_ball;
+        // $lottery->ball_start_from          = $request->ball_start_from;
+        $lottery->is_ticket                = $request->is_ticket;
+        $lottery->ball_start_from          = $request->ball_start_from;
+        $lottery->ball_start               = $request->ball_start;
+        $lottery->ball_end                 = $request->ball_end;
+        $lottery->ball_disable_range       = $request->ball_disable_range;
+        $lottery->auto_creation_phase      = $request->auto_creation_phase ? Status::YES : Status::NO;
+        $lottery->has_power_ball           = $request->has_power_ball ? Status::YES : Status::NO;
+        $lottery->no_of_pw_ball            = $request->no_of_pw_ball ?? 0;
+        $lottery->pw_ball_start_from       = $request->pw_ball_start_from ?? 0;
+        $lottery->has_special_balls        = $request->has_special_balls ? Status::YES : Status::NO;
+        $lottery->special_winning_ball     = $request->special_winning_ball;
+        $lottery->special_winning_prize    = $request->special_winning_prize;
+
+        if ($request->hasFile('image')) {
+            try {
+                $lottery->image = fileUploader($request->image, getFilePath('lottery'), getFileSize('lottery'), @$lottery->image);
+            } catch (\Exception $exp) {
+                $notify[] = ['error', 'Couldn\'t upload the image'];
+                return back()->withNotify($notify);
+            }
+        }
+
+        $lottery->save();
+
+        PhaseCreationSchedule::where('lottery_id', $lottery->id)->delete();
+        if ($lottery->auto_creation_phase) {
+            foreach ($request->days as $key => $day) {
+                $phaseCreationSchedule             = new PhaseCreationSchedule();
+                $phaseCreationSchedule->lottery_id = $lottery->id;
+                $phaseCreationSchedule->phase_type = $request->phase_type;
+                $phaseCreationSchedule->day        = $day;
+                $phaseCreationSchedule->time       = @$request->draw_times[$key];
+                $phaseCreationSchedule->save();
+            }
+
+            if (!$id) {
+                $schedule = $lottery->phaseCreationSchedules()->first();
+                self::createAutoPhase($schedule);
+            }
+        }
+
+        $notify[] = ['success', $notification];
+
+        if ($lottery->has_multi_draw && !$id) {
+            return to_route('admin.lottery.multi.draw.setting', $lottery->id)->withNotify($notify);
+        } else {
+            return  back()->withNotify($notify);
+        }
+    }
+
+    protected function ticketValidation($request, $id)
+    {
+        $imgValidation = $id ? 'nullable' : 'required';
+        $rules = [
+            'name'                      => 'required|string|max:40',
+            'price'                     => 'required|numeric|min:0',
+            'no_of_ball'                => 'required|integer|min:1',
+            // 'ball_start_from'           => 'required|integer|in:0,1',
+            'ball_start_from'           => 'nullable|numeric',
+            'ball_start'                => 'nullable|numeric',
+            'ball_end'                  => 'nullable|numeric',
+            'ball_disable_range'        => 'nullable|numeric|lt:ball_end|gt:ball_start_from',
+            'image'                     => [$imgValidation, new FileTypeValidate(['jpg', 'jpeg', 'png'])],
+            'has_power_ball'            => 'nullable|in:1',
+            'no_of_pw_ball'             => 'nullable|required_if:has_power_ball,==,1|integer|min:0',
+            'pw_ball_start_from'        => 'nullable|required_if:has_power_ball,==,1|integer|in:0,1',
+            'has_special_balls'         => 'nullable|in:1',
+            'special_winning_ball'      => 'nullable|required_if:has_special_balls,==,1|numeric|lt:ball_end|gt:ball_start_from',
+            'special_winning_prize'     => 'nullable|required_if:has_special_balls,==,1|numeric|min:0',
+            'auto_creation_phase'       => 'nullable|in:1',
+            'phase_type'                => 'nullable|required_if:auto_creation_phase,==,1|numeric|in:1,2',
+            'days'                      => 'nullable|required_if:auto_creation_phase,==,1|array',
+            'draw_times'                => 'nullable|required_if:auto_creation_phase,==,1|array'
+        ];
+
+
+        if ($request->phase_type == 1) {
+            $days = days(true);
+            $dayValidation = ['days.*' => 'in:' . implode(',', $days)];
+        } else {
+            $dayValidation = ['days.*' => 'integer|between:1,31'];
+        }
+
+        $rules = array_merge($rules, $dayValidation);
+        $messages = [
+            'days.*.between' => 'Draw dates should be between 1 to 31',
+            'days.*.in'     => 'Draw dates should be a day between ' . implode(', ', days())
+        ];
+
+        $request->validate($rules, $messages);
+    }
+
     public function index()
     {
         $pageTitle = 'All Lotteries';
@@ -108,9 +226,6 @@ class LotteryController extends Controller
         // $lottery->ball_start_from          = $request->ball_start_from;
         $lottery->is_ticket                = $request->is_ticket;
         $lottery->ball_start_from          = $request->ball_start_from;
-        $lottery->ball_start               = $request->ball_start;
-        $lottery->ball_end                 = $request->ball_end;
-        $lottery->ball_disable_range       = $request->ball_disable_range;
         $lottery->total_picking_ball       = $request->total_picking_ball;
         $lottery->has_multi_draw           = $request->has_multi_draw ? Status::YES : Status::NO;
         $lottery->auto_creation_phase      = $request->auto_creation_phase ? Status::YES : Status::NO;
@@ -118,9 +233,6 @@ class LotteryController extends Controller
         $lottery->no_of_pw_ball            = $request->no_of_pw_ball ?? 0;
         $lottery->pw_ball_start_from       = $request->pw_ball_start_from ?? 0;
         $lottery->total_picking_power_ball = $request->total_picking_power_ball ?? 0;
-        $lottery->has_special_balls        = $request->has_special_balls ? Status::YES : Status::NO;
-        $lottery->special_winning_ball     = $request->special_winning_ball;
-        $lottery->special_winning_prize    = $request->special_winning_prize;
 
         if ($request->hasFile('image')) {
             try {
@@ -197,9 +309,6 @@ class LotteryController extends Controller
             'no_of_ball'                => 'required|integer|min:1',
             // 'ball_start_from'           => 'required|integer|in:0,1',
             'ball_start_from'           => 'nullable|numeric',
-            'ball_start'                => 'nullable|numeric',
-            'ball_end'                  => 'nullable|numeric',
-            'ball_disable_range'        => 'nullable|numeric|lt:ball_end|gt:ball_start_from',
             'total_picking_ball'        => 'required|integer|min:1',
             'has_multi_draw'            => 'required|integer|in:0,1',
             'image'                     => [$imgValidation, new FileTypeValidate(['jpg', 'jpeg', 'png'])],
@@ -207,9 +316,6 @@ class LotteryController extends Controller
             'no_of_pw_ball'             => 'nullable|required_if:has_power_ball,==,1|integer|min:0',
             'pw_ball_start_from'        => 'nullable|required_if:has_power_ball,==,1|integer|in:0,1',
             'total_picking_power_ball'  => 'nullable|required_if:has_power_ball,==,1|integer|min:1|lt:no_of_pw_ball',
-            'has_special_balls'         => 'nullable|in:1',
-            'special_winning_ball'      => 'nullable|required_if:has_special_balls,==,1|numeric|lt:ball_end|gt:ball_start_from',
-            'special_winning_prize'     => 'nullable|required_if:has_special_balls,==,1|numeric|min:0',
             'auto_creation_phase'       => 'nullable|in:1',
             'phase_type'                => 'nullable|required_if:auto_creation_phase,==,1|numeric|in:1,2',
             'days'                      => 'nullable|required_if:auto_creation_phase,==,1|array',
@@ -241,6 +347,7 @@ class LotteryController extends Controller
     public function winningSetting($id)
     {
         $lottery   = Lottery::with('winningSettings')->findOrFail($id);
+        // dd($lottery);
         $pageTitle = "Winning Settings Of $lottery->name";
         return view('admin.lottery.winning_setting', compact('lottery', 'pageTitle'));
     }
