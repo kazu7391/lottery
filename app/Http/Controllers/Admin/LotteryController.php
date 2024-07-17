@@ -15,10 +15,42 @@ use Illuminate\Support\Carbon;
 
 class LotteryController extends Controller
 {
+    public function ticketIndex()
+    {
+        $pageTitle = 'All Tickets';
+        $lotteries = Lottery::where('is_ticket', 1)->searchable(['name'])->paginate(getPaginate());
+        return view('admin.lottery.ticket.index', compact('pageTitle', 'lotteries'));
+    }
+
+    public function ticketCreate($id = 0)
+    {
+        if ($id) {
+            $lottery = Lottery::with('phaseCreationSchedules')->findOrFail($id);
+            $pageTitle = 'Update Ticket';
+        } else {
+            $lottery = null;
+            $pageTitle = 'Create Ticket';
+        }
+
+        return view('admin.lottery.ticket.create', compact('pageTitle', 'lottery'));
+    }
+
+    public function ticketPhases()
+    {
+        $pageTitle = 'All Phases';
+        $phases = Phase::searchable(['lottery:name', 'phase_no'])
+            ->join('lotteries', 'phases.lottery_id', '=', 'lotteries.id')
+            ->dateFilter('draw_date')->with('lottery')
+            ->where('lotteries.is_ticket', 1)
+            ->orderBy('draw_date', 'desc')->paginate(getPaginate());
+        $lotteries = Lottery::where('is_ticket', 1)->manual()->orderBy('name')->get();
+        return view('admin.lottery.ticket.phases', compact('pageTitle', 'phases', 'lotteries'));
+    }
+
     public function index()
     {
         $pageTitle = 'All Lotteries';
-        $lotteries = Lottery::searchable(['name'])->paginate(getPaginate());
+        $lotteries = Lottery::where('is_ticket', 0)->searchable(['name'])->paginate(getPaginate());
         return view('admin.lottery.index', compact('pageTitle', 'lotteries'));
     }
 
@@ -74,7 +106,11 @@ class LotteryController extends Controller
         $lottery->line_variations          = $numbers;
         $lottery->no_of_ball               = $request->no_of_ball;
         // $lottery->ball_start_from          = $request->ball_start_from;
+        $lottery->is_ticket                = $request->is_ticket;
         $lottery->ball_start_from          = $request->ball_start_from;
+        $lottery->ball_start               = $request->ball_start;
+        $lottery->ball_end                 = $request->ball_end;
+        $lottery->ball_disable_range       = $request->ball_disable_range;
         $lottery->total_picking_ball       = $request->total_picking_ball;
         $lottery->has_multi_draw           = $request->has_multi_draw ? Status::YES : Status::NO;
         $lottery->auto_creation_phase      = $request->auto_creation_phase ? Status::YES : Status::NO;
@@ -82,6 +118,9 @@ class LotteryController extends Controller
         $lottery->no_of_pw_ball            = $request->no_of_pw_ball ?? 0;
         $lottery->pw_ball_start_from       = $request->pw_ball_start_from ?? 0;
         $lottery->total_picking_power_ball = $request->total_picking_power_ball ?? 0;
+        $lottery->has_special_balls        = $request->has_special_balls ? Status::YES : Status::NO;
+        $lottery->special_winning_ball     = $request->special_winning_ball;
+        $lottery->special_winning_prize    = $request->special_winning_prize;
 
         if ($request->hasFile('image')) {
             try {
@@ -157,6 +196,10 @@ class LotteryController extends Controller
             'line_variations'           => 'required',
             'no_of_ball'                => 'required|integer|min:1',
             // 'ball_start_from'           => 'required|integer|in:0,1',
+            'ball_start_from'           => 'nullable|numeric',
+            'ball_start'                => 'nullable|numeric',
+            'ball_end'                  => 'nullable|numeric',
+            'ball_disable_range'        => 'nullable|numeric|lt:ball_end|gt:ball_start_from',
             'total_picking_ball'        => 'required|integer|min:1',
             'has_multi_draw'            => 'required|integer|in:0,1',
             'image'                     => [$imgValidation, new FileTypeValidate(['jpg', 'jpeg', 'png'])],
@@ -164,6 +207,9 @@ class LotteryController extends Controller
             'no_of_pw_ball'             => 'nullable|required_if:has_power_ball,==,1|integer|min:0',
             'pw_ball_start_from'        => 'nullable|required_if:has_power_ball,==,1|integer|in:0,1',
             'total_picking_power_ball'  => 'nullable|required_if:has_power_ball,==,1|integer|min:1|lt:no_of_pw_ball',
+            'has_special_balls'         => 'nullable|in:1',
+            'special_winning_ball'      => 'nullable|required_if:has_special_balls,==,1|numeric|lt:ball_end|gt:ball_start_from',
+            'special_winning_prize'     => 'nullable|required_if:has_special_balls,==,1|numeric|min:0',
             'auto_creation_phase'       => 'nullable|in:1',
             'phase_type'                => 'nullable|required_if:auto_creation_phase,==,1|numeric|in:1,2',
             'days'                      => 'nullable|required_if:auto_creation_phase,==,1|array',
@@ -227,8 +273,12 @@ class LotteryController extends Controller
     public function phases()
     {
         $pageTitle = 'All Phases';
-        $phases    = Phase::searchable(['lottery:name', 'phase_no'])->dateFilter('draw_date')->with('lottery')->orderBy('draw_date', 'desc')->paginate(getPaginate());
-        $lotteries = Lottery::manual()->orderBy('name')->get();
+        $phases    = Phase::searchable(['lottery:name', 'phase_no'])
+            ->join('lotteries', 'phases.lottery_id', '=', 'lotteries.id')
+            ->dateFilter('draw_date')->with('lottery')
+            ->where('lotteries.is_ticket', 0)
+            ->orderBy('draw_date', 'desc')->paginate(getPaginate());
+        $lotteries = Lottery::where('lotteries.is_ticket', 0)->manual()->orderBy('name')->get();
         return view('admin.lottery.phases', compact('pageTitle', 'phases', 'lotteries'));
     }
 

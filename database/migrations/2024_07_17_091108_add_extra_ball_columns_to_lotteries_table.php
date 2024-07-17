@@ -14,7 +14,9 @@ return new class extends Migration
     public function up()
     {
         Schema::table('lotteries', function (Blueprint $table) {
-            $table->boolean('is_ticket')->default(false);
+            $table->string('ball_start')->nullable()->default(null);
+            $table->string('ball_end')->nullable()->default(null);
+            $table->string('ball_disable_range')->nullable()->default(null);
         });
     }
 
@@ -26,7 +28,9 @@ return new class extends Migration
     public function down()
     {
         Schema::table('lotteries', function (Blueprint $table) {
-            $table->dropColumn('is_ticket');
+            $table->dropColumn('ball_start');
+            $table->dropColumn('ball_end');
+            $table->dropColumn('ball_disable_range');
         });
     }
 };

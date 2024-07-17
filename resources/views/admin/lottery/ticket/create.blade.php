@@ -2,7 +2,7 @@
 @section('panel')
     <form action="{{ route('admin.lottery.store', @$lottery->id) }}" enctype="multipart/form-data" method="POST">
         @csrf
-        <input type="hidden" name="is_ticket" value="0" />
+        <input type="hidden" name="is_ticket" value="1" />
         <div class="row">
             <div class="col-lg-12">
                 <div class="card">
@@ -47,18 +47,6 @@
                                         </div>
                                     </div>
                                     <div class="col-xl-6 col-lg-6">
-                                        @php
-                                            $lineVariation = old('line_variations');
-                                            if (@$lottery) {
-                                                $lineVariation = implode(',', $lottery->line_variations);
-                                            }
-                                        @endphp
-                                        <div class="form-group">
-                                            <label>@lang('Line Variation') <i class="las la-info-circle text--primary" title="@lang('Enter line variation numbers and separate the number by comma. For example: 4,7,10')"></i></label>
-                                            <input class="form-control lineVariation" name="line_variations" placeholder="@lang('Eg: 4,7,10')" required type="text" value="{{ $lineVariation }}">
-                                        </div>
-                                    </div>
-                                    <div class="col-xl-6 col-lg-6">
                                         <div class="form-group ">
                                             <label>@lang('No. Of Balls')</label>
                                             <input class="form-control" min="1" id="no_of_ball"  name="no_of_ball" required type="number" value="{{ old('no_of_ball', @$lottery->no_of_ball) }}">
@@ -72,19 +60,47 @@
                                     </div>
                                     <div class="col-xl-6 col-lg-6">
                                         <div class="form-group ">
-                                            <label>@lang('No. of Picking Ball')</label>
-                                            <input readonly class="form-control" min="1" name="total_picking_ball" required type="number" value="{{ @$lottery->total_picking_ball ?? old('total_picking_ball') }}">
+                                            <label>@lang('Ball End') </label>
+                                            <input class="form-control" min="0" name="ball_end" required type="text" value="{{ old('ball_end', @$lottery->ball_end) }}">
                                         </div>
                                     </div>
                                     <div class="col-xl-6 col-lg-6">
-                                        <div class="form-group">
-                                            <label>@lang('Multi Draw Option')</label>
-                                            <select class="form-control" name="has_multi_draw" required>
-                                                <option disabled selected value="">@lang('Select One')</option>
-                                                <option @selected(old('has_multi_draw', @$lottery->has_multi_draw) == 1) value="1">@lang('Enable')</option>
-                                                <option @selected(old('has_multi_draw', @$lottery->has_multi_draw) === 0) value="0">@lang('Disable')</option>
-                                            </select>
+                                        <label>@lang('Ball Disable Range')  <i class="las la-info-circle text--primary" title="@lang('The Ball Disable Range must be smaller than :ball_end', ['ball_end' => @$lottery->ball_end ?? 'Ball End To'])"></i></label>
+                                        <div class="row align-items-center">
+                                            <div class="col-3">
+                                                <span class="sp-ball-start-from">{{ old('ball_start_from', @$lottery->ball_start_from) }}</span> ~
+                                            </div>
+                                            <div class="col-9">
+                                                <input class="form-control" name="ball_disable_range" type="text" value="{{ old('ball_disable_range', @$lottery->ball_disable_range) }}">
+                                                <input type="hidden" name="ball_start" value="{{ old('ball_start', @$lottery->ball_start) }}" />
+                                            </div>
                                         </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input @checked(old('has_special_balls', @$lottery->has_special_balls)) class="form-check-input" id="hasSpecialBalls" name="has_special_balls" type="checkbox" value="1">
+                                    <label class="form-check-label" for="hasSpecialBalls">@lang('Has Special Balls')</label>
+                                </div>
+                            </div>
+                            <div class="col-xl-4">
+                                <div class="form-group">
+                                    <label>@lang('Special Winner Balls')</label>
+                                    <input class="form-control specialBallInputs" name="special_winning_ball" required type="text" value="{{ old('special_winning_ball', @$lottery->special_winning_ball) }}">
+                                </div>
+                            </div>
+                            @php
+                                $special_winning_prize = old('special_winning_prize', @$lottery->special_winning_prize);
+                            @endphp
+                            <div class="col-xl-4">
+                                <div class="form-group">
+                                    <label>@lang('Special Winner Prize')</label>
+                                    <div class="input-group">
+                                        <input class="form-control specialBallInputs" name="special_winning_prize" required step="any" type="number" value="{{ $special_winning_prize > 0 ? getAmount($special_winning_prize) : '' }}">
+                                        <span class="input-group-text">{{ __($general->cur_text) }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -106,12 +122,6 @@
                                 <div class="form-group">
                                     <label>@lang('Power Ball Start From')</label>
                                     <input class="form-control powerBallInputs" min="0" name="pw_ball_start_from" placeholder="" type="number" value="{{ old('pw_ball_start_from', @$lottery->pw_ball_start_from) }}">
-                                </div>
-                            </div>
-                            <div class="col-xl-4">
-                                <div class="form-group">
-                                    <label>@lang('No. of Picking Power Ball')</label>
-                                    <input class="form-control powerBallInputs" min="0" name="total_picking_power_ball" type="number" value="{{ old('total_picking_power_ball', @$lottery->total_picking_power_ball) }}">
                                 </div>
                             </div>
                         </div>
@@ -286,6 +296,29 @@
                 }
             }
 
+            let hasSpecialBalls = "{{ @$lottery->has_special_balls ?? 0 }}" * 1;
+            @if (old('has_special_balls'))
+                hasSpecialBalls = 1;
+            @endif
+            updateSpecialBallsDOM(hasSpecialBalls);
+            $('[name=has_special_balls]').on('click', function() {
+                let condition = !!$(this).is(':checked');
+                updateSpecialBallsDOM(condition);
+            });
+            function updateSpecialBallsDOM(condition) {
+                let specialBallInputs = $('.specialBallInputs');
+                if (condition == true) {
+                    specialBallInputs.prop('disabled', false);
+                    specialBallInputs.attr('required', true);
+                    specialBallInputs.closest('.form-group').find('label').addClass('required');
+                } else {
+                    specialBallInputs.val('');
+                    specialBallInputs.prop('disabled', true);
+                    specialBallInputs.removeAttr('required');
+                    specialBallInputs.closest('.form-group').find('label').removeClass('required');
+                }
+            }
+
             let phaseDayTimeDiv = $('.phaseDayTimeDiv');
             $('[name=auto_creation_phase]').on('click', function() {
                 phaseDayTimeDiv.find('[name=phase_type]').prop('checked', false);
@@ -392,7 +425,35 @@
             $('[name=no_of_ball]').on('change', function () {
                 let value = $(this).val();
                 $('[name=total_picking_ball]').val(value);
-            })
+
+                let ballNumber = parseInt(value);
+                let ballStartText = '';
+                let ballEndText = 10;
+                if(ballNumber > 1) {
+                    for (let i = 0; i < ballNumber - 1; i++) {
+                        ballStartText += '0';
+                        ballEndText *= 10;
+                    }
+                    ballStartText += '1';
+                    ballEndText = ballEndText - 1;
+                } else {
+                    ballStartText = '1';
+                    ballEndText = '9';
+                }
+                $('[name=ball_start_from]').val(ballStartText);
+                $('.sp-ball-start-from').html(ballStartText);
+                $('[name=ball_end]').val(ballEndText);
+                let ballDisableVal = $('[name=ball_disable_range]').val();
+                if(ballDisableVal === '') {
+                    $('[name=ball_start]').val(ballStartText);
+                }
+            });
+
+            $('[name=ball_disable_range]').on('keyup', function () {
+                let ballDisableVal = $('[name=ball_disable_range]').val();
+                let ballDisableNumb = parseInt(ballDisableVal);
+                $('[name=ball_start]').val(ballDisableNumb + 1);
+            });
         })(jQuery);
     </script>
 @endpush

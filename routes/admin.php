@@ -68,6 +68,10 @@ Route::middleware('admin')->group(function () {
         Route::get('phase/all', 'phases')->name('phase.all');
         Route::post('phase/save/{id?}', 'savePhase')->name('phase.save');
         Route::post('phase/status/{id}', 'updatePhaseStatus')->name('phase.status');
+
+        Route::get('ticket/', 'ticketIndex')->name('ticket.index');
+        Route::get('ticket/create/{id?}', 'ticketCreate')->name('ticket.create');
+        Route::get('ticket/phase/all', 'ticketPhases')->name('ticket.phase.all');
     });
 
     //manage lottery
