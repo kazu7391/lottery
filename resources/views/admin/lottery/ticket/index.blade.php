@@ -20,7 +20,7 @@
                                         <td>
                                             <div class="user">
                                                 <img alt="" class="thumb" src="{{ getImage(getFilePath('lottery') . '/' . $lottery->image, getFileSize('lottery')) }}">
-                                                <a href="{{ route('admin.lottery.ticket.create', $lottery->id) }}">
+                                                <a href="{{ route('admin.tickets.create', $lottery->id) }}">
                                                     <span class="fw-bold ms-2">{{ __($lottery->name) }}</span>
                                                 </a>
                                             </div>
@@ -36,7 +36,7 @@
                                             <button aria-expanded="false" class="btn btn-sm dropdown-toggle btn-outline--primary" data-bs-toggle="dropdown" type="button"> <i class="las la-down-arrow"></i> @lang('Action')</button>
 
                                             <div class="dropdown-menu">
-                                                <a class="dropdown-item" href="{{ route('admin.lottery.ticket.create', $lottery->id) }}"><i class="la la-pencil-alt"></i> @lang('Edit')</a>
+                                                <a class="dropdown-item" href="{{ route('admin.tickets.create', $lottery->id) }}"><i class="la la-pencil-alt"></i> @lang('Edit')</a>
 
                                                 <a class="dropdown-item" href="{{ route('admin.lottery.winning.setting', $lottery->id) }}"><i class="la la-coins"></i> @lang('Winning Settings')</a>
 
@@ -75,7 +75,7 @@
 
 @push('breadcrumb-plugins')
     <x-search-form placeholder="Search..." />
-    <a class="btn btn-outline--primary h-45" href="{{ route('admin.lottery.ticket.create') }}"><i class="las la-plus"></i>@lang('Add New')</a>
+    <a class="btn btn-outline--primary h-45" href="{{ route('admin.tickets.create') }}"><i class="las la-plus"></i>@lang('Add New')</a>
 @endpush
 
 @push('style')

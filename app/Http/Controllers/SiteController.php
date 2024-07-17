@@ -31,10 +31,67 @@ class SiteController extends Controller
         return view($this->activeTemplate . 'home', compact('pageTitle', 'sections'));
     }
 
+    public function getTickets()
+    {
+        $pageTitle = 'Tickets';
+        $lotteries = Lottery::active()->where('is_ticket', 1)->whereHas('winningSettings')->whereHas('phases', function ($query) {
+            $query->active()->whereDate('draw_date', '>=', now())->where('is_set_winner', Status::NO);
+        })->with('winningSettings', 'activePhase')->paginate(getPaginate());
+
+        $sections  = Page::where('tempname', $this->activeTemplate)->where('slug', '/tickets')->first();
+
+        return view($this->activeTemplate . 'ticket.list', compact('pageTitle', 'lotteries', 'sections'));
+    }
+
+    public function playTicket($slug, $id)
+    {
+        $lottery = Lottery::with(['activePhase', 'multiDrawOptions' => function ($options) {
+            $options->active();
+        }])->active()->whereHas('activePhase')->findOrFail($id);
+
+        $pageTitle = 'Play ' . $lottery->name;
+        return view($this->activeTemplate . 'ticket.play', compact('pageTitle', 'lottery'));
+    }
+
+    public function getTicket(Request $request)
+    {
+        $lottery = Lottery::where('id', $request->lottery_id)->first();
+        if (!$lottery) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Lottery not found'
+            ]);
+        }
+
+        if ($lottery->ball_start_from) {
+            $normalBallLimit = $lottery->no_of_ball + 1;
+        } else {
+            $normalBallLimit = $lottery->no_of_ball;
+        }
+
+        if ($lottery->pw_ball_start_from) {
+            $pwBallLimit = $lottery->no_of_pw_ball + 1;
+        } else {
+            $pwBallLimit = $lottery->no_of_pw_ball;
+        }
+
+        $html = '';
+        for ($i = 1; $i <= $request->difference; $i++) {
+            $lotteryNumber = $request->last_ticket + $i;
+            $html .= view($this->activeTemplate . 'ticket.single_ticket', compact('lottery', 'lotteryNumber', 'normalBallLimit', 'pwBallLimit'))->render();
+        }
+
+        return response()->json([
+            'status' => true,
+            'message' => 'success',
+            'html' => $html
+        ]);
+    }
+
     public function lotteryTickets()
     {
         $pageTitle = 'Lottery Tickets';
-        $lotteries = Lottery::active()->whereHas('winningSettings')->whereHas('phases', function ($query) {
+        $lotteries = Lottery::active()->where('is_ticket', 0)->whereHas('winningSettings')->whereHas('phases', function ($query) {
             $query->active()->whereDate('draw_date', '>=', now())->where('is_set_winner', Status::NO);
         })->with('winningSettings', 'activePhase')->paginate(getPaginate());
 
