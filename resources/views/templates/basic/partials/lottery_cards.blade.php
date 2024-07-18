@@ -32,9 +32,16 @@
                         </div>
                     </div>
                     <div class="ticket-item__button">
+                        @if($lottery->is_ticket)
+                        <a class="btn btn--white btn--sm" href="{{ route('ticket.play', ['slug' => slug($lottery->name), 'id' => $lottery->id]) }}">
+                            @lang('PURCHASE NOW') 
+                        </a>
+                        @else
                         <a class="btn btn--white btn--sm" href="{{ route('lottery.play', ['slug' => slug($lottery->name), 'id' => $lottery->id]) }}">
                             @lang('PURCHASE NOW') 
                         </a>
+                        @endif
+                        
                     </div>
                 </div>
             </div>
