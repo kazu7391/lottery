@@ -91,7 +91,7 @@ class SiteController extends Controller
     public function lotteryTickets()
     {
         $pageTitle = 'Lottery Tickets';
-        $lotteries = Lottery::active()->where('is_ticket', 0)->whereHas('winningSettings')->whereHas('phases', function ($query) {
+        $lotteries = Lottery::active()->whereHas('winningSettings')->whereHas('phases', function ($query) {
             $query->active()->whereDate('draw_date', '>=', now())->where('is_set_winner', Status::NO);
         })->with('winningSettings', 'activePhase')->paginate(getPaginate());
 
