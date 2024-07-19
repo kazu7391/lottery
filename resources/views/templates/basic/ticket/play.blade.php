@@ -57,7 +57,7 @@
             <div class="row g-4">
                 <div class="col-xl-3 order-xl-2">
                     <div class="summery-card">
-                        <form action="{{ route('user.lottery.pick', $lottery->id) }}" method="POST">
+                        <form action="{{ route('user.lottery.pickTicket', $lottery->id) }}" method="POST">
                             @csrf
                             <input name="phase_id" type="hidden" value="{{ $lottery->activePhase->id }}">
                             <div class="summery-card__head">
@@ -281,6 +281,7 @@
                 if ($(this).hasClass('active')) {
                     $(this).removeClass('active');
                     removeInputField(ballNo);
+                    $('.picked_numbers_list').find(`[data-number="${ballNo}"]`).remove();
 
                     if (normalBallLength - 1 < nbMaxLimit) {
                         ticket.find('.normalBtn').not('.active').removeAttr('disabled');
@@ -292,12 +293,14 @@
 
                     $(this).addClass('active');
                     appendInputField(ticketNumber, ballNo);
-
+                    $('.picked_numbers_list').append('<li data-number="' + ballNo + '">' + $(ticket).find(`.normalBtn[data-no=${ballNo}]`).text() + '</li>');
+                    
                     if (normalBallLength + 1 == nbMaxLimit) {
                         ticket.find('.normalBtn').not('.active').attr('disabled', true);
                     }
                 }
                 enableDisableSubmit();
+                updateDOM();
             });
 
             $(document).on('click', '.powerBtn', function() {
@@ -380,7 +383,7 @@
                 normalBalls.forEach(normal => {
                     $(ticket).find(`.normalBtn[data-no=${normal}]`).addClass('active');
                     appendInputField(ticketNumber, normal);
-                    $('.picked_numbers_list').append('<li>' + $(ticket).find(`.normalBtn[data-no=${normal}]`).text() + '</li>');
+                    $('.picked_numbers_list').append('<li data-number="' + normal + '">' + $(ticket).find(`.normalBtn[data-no=${normal}]`).text() + '</li>');
                 });
 
                 powerBalls.forEach(power => {
