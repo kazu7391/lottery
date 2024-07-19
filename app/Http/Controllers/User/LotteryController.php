@@ -39,6 +39,149 @@ class LotteryController extends Controller
         return view($this->activeTemplate . 'user.lottery.winning_history', compact('pageTitle', 'winners'));
     }
 
+    public function pickTicket(Request $request, $id)
+    {
+        $lottery = Lottery::active()->with(['activePhase', 'multiDrawOptions' => function ($query) {
+            $query->where('status', Status::ENABLE);
+        }])->whereHas('activePhase')->findOrFail($id);
+
+        $this->pickingTicketValidation($lottery, $request);
+
+        if ($request->phase_id != @$lottery->activePhase->id) {
+            $notify[] = ['error', 'The phase is invalid, please try an active phase'];
+            return back()->withNotify($notify);
+        }
+
+        $user         = auth()->user()->load('referrer');
+        $totalAmount  = $ticketAmount = $lottery->price * count($request->ticket);
+        $option       = null;
+        $discount     = 0;
+
+        if ($lottery->has_multi_draw && $request->multi_draw_option_id) {
+            $option       = $lottery->multiDrawOptions->where('id', $request->multi_draw_option_id)->first();
+            $totalAmount  = $ticketAmount * $option->total_draw;
+            $discount     = $totalAmount * $option->discount / 100;
+            $totalAmount  = $totalAmount - $discount;
+
+            $ticketAmount = $totalAmount / $option->total_draw;
+        }
+
+        if ($request->payment_via == 'balance' && $user->balance < $totalAmount) {
+            $notify[] = ['error', 'You don\'t have sufficient coin'];
+            return back()->withNotify($notify);
+        }
+
+        $userPick               = new UserPick();
+        $userPick->user_id      = $user->id;
+        $userPick->phase_id     = $lottery->activePhase->id;
+        $userPick->amount       = $ticketAmount;
+        $userPick->save();
+
+        $this->insertPickedTickets($request, $userPick);
+
+        if ($lottery->has_multi_draw && $request->multi_draw_option_id) {
+            $userMultiDraw                 = new UserMultiDraw();
+            $userMultiDraw->user_id        = $user->id;
+            $userMultiDraw->lottery_id     = $lottery->id;
+            $userMultiDraw->user_pick_id   = $userPick->id;
+            $userMultiDraw->total_draw     = @$option->total_draw;
+            $userMultiDraw->remaining_draw = @$option->total_draw - 1;
+            $userMultiDraw->amount         = $totalAmount;
+            $userMultiDraw->discount       = $discount;
+            $userMultiDraw->total_amount   = $totalAmount + $discount;
+            $userMultiDraw->advance        = $totalAmount - $ticketAmount;
+            $userMultiDraw->last_draw_date = $lottery->activePhase->draw_date;
+            $userMultiDraw->save();
+        }
+
+        if ($request->payment_via == 'balance') {
+            $user->balance -= $totalAmount;
+            $user->save();
+
+            $transaction               = new Transaction();
+            $transaction->user_id      = $user->id;
+            $transaction->amount       = $totalAmount;
+            $transaction->post_balance = $user->balance;
+            $transaction->charge       = 0;
+            $transaction->trx_type     = '-';
+            $transaction->details      = 'Payment for purchase ticket';
+            $transaction->trx          = getTrx();
+            $transaction->remark       = 'payment';
+            $transaction->save();
+
+            $userPick->status = Status::PAYMENT_SUCCESS;
+            $userPick->save();
+
+            notify($user, 'PURCHASE_COMPLETE', [
+                'trx'            => $transaction->trx,
+                'lottery'        => $lottery->name,
+                'price'          => showAmount($lottery->price, exceptZeros: true),
+                'total_ticket'   => count($request->ticket),
+                'total_price'    => showAmount($totalAmount),
+                'post_balance'   => showAmount($user->balance)
+            ]);
+
+            if (gs('lottery_purchase_commission')) {
+                levelCommission($user, $totalAmount, 'lottery_purchase_commission', $transaction->trx);
+            }
+        } else {
+            return to_route('user.deposit.index', ['user_pick' => encrypt($userPick->id)]);
+        }
+
+        $notify[] = ['success', 'Ticket purchased successfully'];
+        return back()->withNotify($notify);   
+    }
+
+    private function pickingTicketValidation($lottery, $request)
+    {
+        $ballStartFrom = (int) $lottery->ball_start_from;
+        if ($ballStartFrom) {
+            $maximumNormalBallNumber = (int) $lottery->ball_end;
+        } else {
+            $maximumNormalBallNumber = $lottery->ball_end - 1;
+        }
+
+        if ($lottery->pw_ball_start_from) {
+            $maximumPowerBallNumber = $lottery->no_of_pw_ball;
+        } else {
+            $maximumPowerBallNumber = $lottery->no_of_pw_ball - 1;
+        }
+
+        $powerBallValidation = 'nullable';
+        if ($lottery->has_power_ball) {
+            $powerBallValidation = 'required';
+        }
+
+        $validation = [
+            'phase_id'               => 'required',
+            'payment_via'            => 'required|in:balance,direct',
+            'entry_type'             => 'nullable|in:1,2',
+            'ticket.*.normal_ball'   => 'required|array',
+            'ticket.*.normal_ball.*' => 'required|numeric|between:' . $lottery->ball_start_from . ',' . $maximumNormalBallNumber,
+            'ticket.*.power_ball'    => $lottery->has_power_ball ? $powerBallValidation . '|array|size:' . $lottery->total_picking_power_ball : '',
+            'ticket.*.power_ball.*'  => $lottery->has_power_ball ? $powerBallValidation. '|numeric|between:' . $lottery->pw_ball_start_from . ',' . $maximumPowerBallNumber : ''
+        ];
+
+        $message = [
+            'phase_id.required'               => 'The phase field is required',
+            'payment_via.in'                  => 'The payment via should be in balance or direct',
+            'ticket.*.normal_ball.required'   => 'Each ticket should have ' . $lottery->total_picking_ball . ' normal balls selected',
+            'ticket.*.normal_ball.size'       => 'The normal ball must be ' . $lottery->total_picking_ball,
+            'ticket.*.normal_ball.*.between'  => 'The normal ball must be between ' . $lottery->ball_start_from . ' and ' . $maximumNormalBallNumber,
+            'ticket.*.power_ball.required'    => 'Each ticket should have ' . $lottery->total_picking_power_ball . ' power balls selected',
+            'ticket.*.power_ball.size'        => 'The power ball must be ' . $lottery->total_picking_power_ball,
+            'ticket.*.power_ball.*.between'   => 'The power ball must be between ' . $lottery->pw_ball_start_from . ' and ' . $maximumPowerBallNumber
+        ];
+
+        if ($lottery->has_multi_draw && $request->entry_type == 2) {
+            $optionIds                 = $lottery->multiDrawOptions->pluck('id')->toArray();
+            $multiDrawOptionValidation = ['multi_draw_option_id' => 'required|integer|in:' . implode(',', $optionIds)];
+            $validation                = array_merge($validation,  $multiDrawOptionValidation);
+        }
+
+        $request->validate($validation, $message);
+    }
+
     public function pick(Request $request, $id)
     {
         $lottery = Lottery::active()->with(['activePhase', 'multiDrawOptions' => function ($query) {
