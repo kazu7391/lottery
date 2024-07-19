@@ -75,11 +75,8 @@ class SiteController extends Controller
             $pwBallLimit = $lottery->no_of_pw_ball;
         }
 
-        $html = '';
-        for ($i = 1; $i <= $request->difference; $i++) {
-            $lotteryNumber = $request->last_ticket + $i;
-            $html .= view($this->activeTemplate . 'ticket.single_ticket', compact('lottery', 'lotteryNumber', 'normalBallLimit', 'pwBallLimit'))->render();
-        }
+        $lotteryNumber = 1;
+        $html = view($this->activeTemplate . 'ticket.single_ticket', compact('lottery', 'lotteryNumber', 'normalBallLimit', 'pwBallLimit'))->render();
 
         return response()->json([
             'status' => true,
