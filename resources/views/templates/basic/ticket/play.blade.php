@@ -170,13 +170,14 @@
                                 <li>
                                     <a class="incDecTicket t-link lottery-head__link" data-total_line="{{ $line }}" href="javascript:void(0)">
                                         {{ $line }} @if ($line > 1)
-                                            @lang('Lines')
+                                            @lang('Numbers')
                                         @else
-                                            @lang('Line')
+                                            @lang('Number')
                                         @endif
                                     </a>
                                 </li>
                             @endforeach
+                            <input type="hidden" id="hd_total_numbers" value="10" />
                         </ul>
                         <div class="lottery-head__action">
                             <ul class="list list--row d-flex justify-content-center align-items-center" style="--gap: .5rem;">
@@ -200,19 +201,19 @@
                     </div>
                     <div class="row g-3">
                         <div class="col-12">
-                            <div class="col-12 pickedNumbersContainer">
+                            <div class="col-12 mb-3 pickedNumbersContainer">
                                 <p>@lang('Picked Numbers')</p>
                                 <ul class="list--row flex-wrap picked_numbers_list">
                                 </ul>
                             </div>
 
-                            <ul class="list list--row flex-wrap justify-content-center justify-content-sm-start lottery-container lotteryContainer">
+                            <ul class="list list--row flex-wrap justify-content-center justify-content-sm-start lotteryContainer">
                                 @php
                                     $no_of_tickets = "";
                                     for ($i = 0; $i < $lottery->no_of_ball; $i++) {
                                         $no_of_tickets .= "9";
                                     }
-                                        
+
                                     $normalBallLimit = $lottery->no_of_ball;
 
                                     if ($lottery->pw_ball_start_from) {
@@ -221,7 +222,7 @@
                                         $pwBallLimit = $lottery->no_of_pw_ball;
                                     }
                                 @endphp
-                                
+
                             </ul>
                         </div>
                     </div>
@@ -281,19 +282,18 @@
                     $(this).removeClass('active');
                     removeInputField(ballNo);
 
-                    if (normalBallLength - 1 < nbPick) {
+                    if (normalBallLength - 1 < nbMaxLimit) {
                         ticket.find('.normalBtn').not('.active').removeAttr('disabled');
                     }
                 } else {
-                    if (normalBallLength >= nbPick) {
+                    if (normalBallLength >= nbMaxLimit) {
                         return false;
                     }
-
 
                     $(this).addClass('active');
                     appendInputField(ticketNumber, ballNo);
 
-                    if (normalBallLength + 1 == nbPick) {
+                    if (normalBallLength + 1 == nbMaxLimit) {
                         ticket.find('.normalBtn').not('.active').attr('disabled', true);
                     }
                 }
@@ -327,26 +327,6 @@
                 enableDisableSubmit();
             });
 
-            $(document).on('click', '.quickPickBtn', function() {
-                let ticket = $(this).parents('.ticket');
-                const myInterval = setInterval(() => {
-                    let normalBalls = generateRandomNumbers(nbPick, nbMinLimit, nbMaxLimit);
-                    let powerBalls = generateRandomNumbers(pwPick, pwMinLimit, pwMaxLimit);
-
-                    let ball = {
-                        normal_balls: normalBalls,
-                        power_balls: powerBalls
-                    }
-                    selectBall(ball, ticket);
-                }, 100);
-
-                setTimeout(function() {
-                    clearInterval(myInterval);
-                    enableDisableSubmit();
-                }, 500);
-
-            });
-
             $('.allQuickPickBtn').on('click', function() {
                 $('#quickPickModal').modal('show');
             });
@@ -356,23 +336,14 @@
                 if(qbNumbers !== '') {
                     $('.picked_numbers_list').html('');
                     qbNumbers = parseInt(qbNumbers);
-                    let tickets = $('.ticket');
-                    for (var i = tickets.length; i > 0; i--) {
-                        $('.hiddenFields').find(`[data-ticket_number="${i}"]`).remove();
-                    }
-                    $.each(tickets, function(index, element) {
-                        if(index < qbNumbers) {
-                            let normalBalls = generateRandomNumbers(1, nbMinLimit, nbMaxLimit);
-                            let powerBalls = generateRandomNumbers(1, pwMinLimit, nbMaxLimit);
-                            let ball = {
-                                normal_balls: normalBalls,
-                                power_balls: powerBalls
-                            }
-                            selectBall(ball, $(element));
-                        }
-                    });
 
+                    $('.hd-picked-number').remove();
+                    $('.ticket').remove();
+                    getNewLotteryAndPick(qbNumbers);
+
+                    $('.incDecTicket').removeClass('active');
                     $('.buyTicketBtn').removeAttr('disabled');
+
                     let totalTicket = qbNumbers;
                     let totalPrice = totalTicket * ticketPrice;
                     let totalAmount = totalPrice;
@@ -389,16 +360,8 @@
                 $('#quickPickModal').modal('hide');
             });
 
-            $(document).on('click', '.clearBtn', function() {
-                let ticket = $(this).parents('.ticket');
-                let ticketNumber = ticket.data('ticket_number');
-                ticket.find('button.active').removeClass('active');
-                ticket.find('button:disabled').removeAttr('disabled');
-                $('.hiddenFields').find(`input[data-ticket_number="${ticketNumber}"]`).remove();
-                $('.buyTicketBtn').attr('disabled', true);
-            });
-
             $('.allRemoveBtn').on('click', function() {
+                $('.picked_numbers_list').html('');
                 $('.hiddenFields').html('');
                 $('button.active').removeClass('active');
                 $('button:disabled').removeAttr('disabled');
@@ -411,21 +374,16 @@
                 let ticketNumber = ticket.data('ticket_number');
 
                 $(ticket).find('.normalBtn.active').removeClass('active');
-                $(ticket).find('.normalBtn').attr('disabled', true);
-
                 $(ticket).find('.powerBtn.active').removeClass('active');
-                $(ticket).find('.powerBtn').attr('disabled', true);
-                $('.hiddenFields').find(`input[data-ticket_number="${ticketNumber}"]`).remove();
+                $('.hd-picked-number').remove();
 
                 normalBalls.forEach(normal => {
-                    $(ticket).find(`.normalBtn[data-no=${normal}]`).removeAttr('disabled');
                     $(ticket).find(`.normalBtn[data-no=${normal}]`).addClass('active');
                     appendInputField(ticketNumber, normal);
                     $('.picked_numbers_list').append('<li>' + $(ticket).find(`.normalBtn[data-no=${normal}]`).text() + '</li>');
                 });
 
                 powerBalls.forEach(power => {
-                    $(ticket).find(`.powerBtn[data-no=${power}]`).removeAttr('disabled');
                     $(ticket).find(`.powerBtn[data-no=${power}]`).addClass('active');
                     appendInputField(ticketNumber, power, 'power_ball');
                 });
@@ -435,7 +393,7 @@
             function appendInputField(ticketNumber, ballNo, ballType = 'normal_ball') {
                 let hiddenFieldDiv = $('.hiddenFields');
                 let inputs = '';
-                inputs += `<input type="hidden" name="ticket[${ticketNumber}][${ballType}][]" data-ticket_number="${ticketNumber}" data-${ballType}="${ballNo}" value="${ballNo}">`;
+                inputs += `<input type="hidden" class="hd-picked-number" name="ticket[${ticketNumber}][${ballType}][]" data-ticket_number="${ticketNumber}" data-${ballType}="${ballNo}" value="${ballNo}">`;
                 hiddenFieldDiv.append(inputs);
             }
 
@@ -450,51 +408,43 @@
                 }
 
                 let totalLine = $(this).data('total_line') * 1;
-                let tickets = $(document).find('.ticket');
-                let difference = totalLine - tickets.length;
+                $('.hd-picked-number').remove();
+                $('.ticket').remove();
+                getNewLotteryAndPick(totalLine);
 
-                if (difference > 0) {
-                    // getNewLottery(difference);
-                    getNewLotteryAndPick(difference);
-                }
-
-                if (difference < 0) {
-                    difference = Math.abs(difference);
-                    for (var i = tickets.length; i > totalLine; i--) {
-                        $('.hiddenFields').find(`[data-ticket_number="${i}"]`).remove();
-                    }
-
-                    $(document).find(`.ticket:gt(${tickets.length - difference - 1})`).remove();
-                    updateDOM();
-                }
                 $('.incDecTicket').removeClass('active');
                 $(this).addClass('active');
+
+                let totalTicket = totalLine;
+                let totalPrice = totalTicket * ticketPrice;
+                let totalAmount = totalPrice;
+                $('.totalTicket').text(totalTicket);
+                $('.totalPrice').text(parseFloat(totalPrice).toFixed(2) + " {{ $general->cur_text }}");
+                $('.totalAmount').text(parseFloat(totalAmount).toFixed(2) + " {{ $general->cur_text }}");
             });
 
-            function getNewLotteryAndPick(difference) {
-                let lastTicket = $(document).find('.ticket').last().data('ticket_number');
+            function getNewLotteryAndPick(totalLine) {
                 let lotteryId = '{{ $lottery->id }}';
                 let data = {
-                    last_ticket: lastTicket,
                     lottery_id: lotteryId,
-                    difference: difference
                 };
                 $.get("{{ route('ticket.single') }}", data,
                     function(response, status, jqXHR) {
                         if (response.status) {
                             $('.lotteryContainer').append(response.html);
-                            updateDOM();
-                            pickRandomNumbers();
+                            pickRandomNumbers(totalLine);
                         }
                     }
                 );
+
+                updateDOM();
             }
 
-            function pickRandomNumbers() {
+            function pickRandomNumbers(totalLine) {
                 let tickets = $('.ticket');
                 $.each(tickets, function(index, element) {
-                    let normalBalls = generateRandomNumbers(1, nbMinLimit, nbMaxLimit);
-                    let powerBalls = generateRandomNumbers(1, pwMinLimit, pwMaxLimit);
+                    let normalBalls = generateRandomNumbers(totalLine, nbMinLimit, nbMaxLimit);
+                    let powerBalls = generateRandomNumbers(totalLine, pwMinLimit, pwMaxLimit);
                     let ball = {
                         normal_balls: normalBalls,
                         power_balls: powerBalls
@@ -504,31 +454,11 @@
                 $('.buyTicketBtn').removeAttr('disabled');
             }
 
-            function getNewLottery(difference) {
-                let lastTicket = $(document).find('.ticket').last().data('ticket_number');
-                let lotteryId = {{ $lottery->id }};
-                let data = {
-                    last_ticket: lastTicket,
-                    lottery_id: lotteryId,
-                    difference: difference
-                };
-
-                $.get("{{ route('lottery.ticket.single') }}", data,
-                    function(response, status, jqXHR) {
-                        if (response.status) {
-                            $('.lotteryContainer').append(response.html);
-                            updateDOM();
-                        }
-                    }
-                );
-            }
-
             function updateDOM() {
-                let totalTicket = $(document).find('.ticket').length;
+                let totalTicket = $('.hd-picked-number').length;
                 let totalPrice = totalTicket * ticketPrice;
                 let totalAmount = totalPrice;
                 let hasMultiDrawOption = @json($hasMultiDrawOption);
-                console.log(hasMultiDrawOption);
 
                 if ($('[name=multi_draw_option_id]').is(':disabled') || !hasMultiDrawOption) {
                     $('.multiDrawLi').addClass('d-none');
@@ -564,18 +494,26 @@
             function generateRandomNumbers(pickNumbers, min, max) {
                 let number = [];
 
-                for (var i = 0; i < pickNumbers; i++) {
-                    var generatedNumber = parseInt((Math.random() * (max - min)) + min);
-                    do {
-                        var isExist = number.indexOf(generatedNumber);
-                        if (isExist >= 0) {
-                            generatedNumber = parseInt((Math.random() * (max - min)) + min);
-                        } else {
-                            number.push(generatedNumber);
-                            isExist = -2;
+                if(typeof(pickNumbers) == 'number' && max > 0) {
+                    console.log(pickNumbers);
+                    if(pickNumbers <= max) {
+                        for (var i = 0; i < pickNumbers; i++) {
+                            let generatedNumber = parseInt((Math.random() * (max - min)) + min);
+                            let isExist;
+                            do {
+                                let isExist = number.indexOf(generatedNumber);
+                                if (isExist >= 0) {
+                                    generatedNumber = parseInt((Math.random() * (max - min)) + min);
+                                } else {
+                                    number.push(generatedNumber);
+                                    isExist = -2;
+                                }
+                            }
+                            while (isExist > -1);
                         }
+                    } else {
+                        alert("@lang('Can not choose numbers more than ')" + max)
                     }
-                    while (isExist > -1);
                 }
 
                 return number;
@@ -592,7 +530,7 @@
                 }
                 updateDOM();
             });
-    
+
             $('[name=multi_draw_option_id]').on('change', function() {
                 updateDOM();
             });
@@ -617,6 +555,10 @@
         .picked_numbers_list li {
             padding: 5px;
             border: 1px solid hsl(var(--border) / 0.5);
+        }
+
+        .lottery__list li {
+            width: auto;
         }
     </style>
 @endpush
