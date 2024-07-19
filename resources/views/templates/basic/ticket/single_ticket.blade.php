@@ -7,14 +7,20 @@
                     for ($i = 0; $i < $lottery->no_of_ball; $i++) {
                         $no_of_tickets .= "9";
                     }
+                    $numbers = [];
+                    for ($i = 1; $i <= intval($no_of_tickets); $i++) {
+                        $numbers[] = $i;
+                    }
+                    shuffle($numbers);
+
                 @endphp
-                @for ($i = 1; $i <= intval($no_of_tickets); $i++)
-                    <li class="normalBallNo-{{ $i }}">
-                        <button class="lottery__btn normalBtn" data-no="{{ $i }}">
-                            {{ str_pad($i, $lottery->no_of_ball, '0', STR_PAD_LEFT) }}
+                @foreach($numbers as $number)
+                    <li class="normalBallNo-{{ $number }}">
+                        <button class="lottery__btn normalBtn" data-no="{{ $number }}">
+                            {{ str_pad($number, $lottery->no_of_ball, '0', STR_PAD_LEFT) }}
                         </button>
                     </li>
-                @endfor
+                @endforeach
             </ul>
         </div>
     </div>

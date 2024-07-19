@@ -16,7 +16,7 @@ class DrawController extends Controller
     public function pendingDraw()
     {
         $pageTitle = 'Pending Draws';
-        $phases    = Phase::active()->winnerNotSet()->whereDate('draw_date', '<=', now())->with('lottery:id,name')->orderBy('draw_date', 'desc')->get();
+        $phases    = Phase::active()->winnerNotSet()->whereDate('draw_date', '<=', now())->with('lottery:id,name,is_ticket')->orderBy('draw_date', 'desc')->get();
         return view('admin.lottery.draw.pending', compact('pageTitle', 'phases'));
     }
 

@@ -294,13 +294,13 @@
                     $(this).addClass('active');
                     appendInputField(ticketNumber, ballNo);
                     $('.picked_numbers_list').append('<li data-number="' + ballNo + '">' + $(ticket).find(`.normalBtn[data-no=${ballNo}]`).text() + '</li>');
-                    
+
                     if (normalBallLength + 1 == nbMaxLimit) {
                         ticket.find('.normalBtn').not('.active').attr('disabled', true);
                     }
                 }
-                enableDisableSubmit();
                 updateDOM();
+                enableDisableSubmit();
             });
 
             $(document).on('click', '.powerBtn', function() {
@@ -484,10 +484,8 @@
 
             function enableDisableSubmit() {
                 let buyBtn = $('.buyTicketBtn');
-                let totalTicket = $(document).find('.ticket').length;
-                let totalActiveNbBall = $(document).find('.normalBtn.active').length;
-                let totalActivePwBall = $(document).find('.powerBtn.active').length;
-                if (totalTicket * nbPick > totalActiveNbBall || totalTicket * pwPick > totalActivePwBall) {
+                let totalTicket = $('.hd-picked-number').length;
+                if (totalTicket > nbMaxLimit) {
                     buyBtn.attr('disabled', true);
                 } else {
                     buyBtn.removeAttr('disabled');
@@ -507,6 +505,7 @@
                                 let isExist = number.indexOf(generatedNumber);
                                 if (isExist >= 0) {
                                     generatedNumber = parseInt((Math.random() * (max - min)) + min);
+                                    i--;
                                 } else {
                                     number.push(generatedNumber);
                                     isExist = -2;
